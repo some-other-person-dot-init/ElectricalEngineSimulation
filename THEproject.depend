@@ -29,14 +29,14 @@
 	"wx/msw/winundef.h"
 	"wx/features.h"
 
-1587560968 c:\wx\3.0.5\include\wx\platform.h
+1657978802 c:\wx\3.0.5\include\wx\platform.h
 	<unistd.h>
 	<TargetConditionals.h>
 	<AvailabilityMacros.h>
 	"wx/osx/config_xcode.h"
 	"wx/android/config_android.h"
 	"wx/compiler.h"
-	"wx/setup.h"
+	"wx/msw/setup.h"
 	"wx/msw/wince/libraries.h"
 	"wx/msw/libraries.h"
 	"wx/msw/gccpriv.h"
@@ -2960,6 +2960,8 @@
 
 1650296380 c:\users\user\documents\Инфа ибучая\theproject\app.h
 
-1654441363 c:\users\user\documents\Инфа ибучая\theproject\simulation.h
+1655756514 c:\users\user\documents\Инфа ибучая\theproject\simulation.h
 	<math.h>
+
+1587560968 c:\wx\3.0.5\include\wx\msw\setup.h
 
