@@ -19,6 +19,8 @@ class MainPanel : public wxPanel
 public:
     MainPanel(wxFrame *frame);
 
+    void onStartButton(wxCommandEvent &evt);
+
     virtual ~MainPanel();
 };
 

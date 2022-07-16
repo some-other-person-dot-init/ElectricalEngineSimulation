@@ -1,7 +1,13 @@
+#Extensions
 *.cbp
 *.depend
 *.layout
 *.bak
+*.exe
+*.o
+*.txt
 
+*Paths
 [Bb]in/
 [Oo]bj/
+
