@@ -25,6 +25,7 @@ const T & sqr(const T & n)
     return n * n;
 }
 
+
 // Parent class for all electronics
 class ElectricalBase
 {
@@ -36,10 +37,11 @@ protected:
 public:
     virtual void setInputVoltage(const double u, const bool isCurrentPersist);
     virtual void setInputCurrent(const double i);
+
     virtual double getOutputVoltage();
     virtual double getOutputCurrent();
 
-    virtual int runSimulation();
+    virtual int runSimulation(const double dt);
 
 private:
     double InVolt = 0.0;
@@ -72,12 +74,13 @@ double ElectricalBase::getOutputCurrent()
     return this->OutCurr;
 }
 
-int ElectricalBase::runSimulation()
+int ElectricalBase::runSimulation(const double dt)
 {
     return 0;
 }
 
 ElectricalBase::~ElectricalBase() {}
+
 
 // DC source
 template <class T, class U>
@@ -95,13 +98,13 @@ public:
     double getOutputVoltage();
     double getOutputCurrent();
 
-    int runSimulation();
+    int runSimulation(const double dt);
 
     virtual ~DCSource();
 
 private:
-    double OutVolt = 0.0;
-    double OutCurr = 0.0;
+    double OutVolt = 0.0; // V
+    double OutCurr = 0.0; // A
 };
 
 template <class T, class U>
@@ -138,7 +141,7 @@ double DCSource<T,U>::getOutputCurrent()
 }
 
 template <class T, class U>
-int DCSource<T,U>::runSimulation()
+int DCSource<T,U>::runSimulation(const double dt)
 {
     this->OutDevice->setInputVoltage(this->OutVolt, (this->OutCurr == INT_MAX) ? false : true);
 
@@ -151,6 +154,7 @@ DCSource<T,U>::~DCSource()
     this->InDevice = NULL;
     this->OutDevice = NULL;
 }
+
 
 // Simple converter (Inverter) DC->AC [src->INV->eng]
 template <class T, class U>
@@ -165,14 +169,16 @@ public:
 
     void setInputVoltage(const double u, const bool isCurrentPersist = true);
     void setInputCurrent(const double i);
+
     double getOutputVoltage();
     double getOutputCurrent();
     double getOutputFrequency();
+
     void setProgrammVoltage(const double u);
     void setProgrammCurrent(const double i);
     void setProgrammFrequency(const double f);
 
-    int runSimulation();
+    int runSimulation(const double dt);
 
     virtual ~SimpInverter();
 
@@ -182,9 +188,9 @@ private:
     double InCurr = 0.0;
 
     // Real values
-    double Volt = 0.0;
-    double Curr = 0.0;
-    double Freq = 0.0;
+    double Volt = 0.0; // V
+    double Curr = 0.0; // A
+    double Freq = 0.0; // hz
 
     // Programmed values
     double ProgVolt = 0.0;
@@ -197,7 +203,7 @@ private:
     double OutFreq = 0.0;
 
     // Sensor values
-    double EngRotRate = 0.0;
+    double EngRotRate = 0.0; // hz
 };
 
 template <class T, class U>
@@ -257,7 +263,7 @@ void SimpInverter<T,U>::setProgrammFrequency(const double f)
 }
 
 template <class T, class U>
-int SimpInverter<T,U>::runSimulation()
+int SimpInverter<T,U>::runSimulation(const double dt)
 {
     this->OutVolt = min(this->ProgVolt, this->InVolt/sqrt(2));
     this->OutCurr = min(this->ProgCurr, this->InCurr/sqrt(2));
@@ -277,6 +283,7 @@ SimpInverter<T,U>::~SimpInverter()
     this->InDevice = NULL;
     this->OutDevice = NULL;
 }
+
 
 // Simplified model of AC induction motor [inv->ENG->mech]
 template <class T, class U>
@@ -302,18 +309,18 @@ public:
     // false: reactive resistance is static and being constant
     void switchReactiveConst(const bool enable);
 
-    double getOutputMoment();
+    double getOutputTorque();
     double getOutputRotationRate();
 
-    int runSimulation();
+    int runSimulation(const double dt);
 
     virtual ~SimpAsyncEngine();
 
 private:
     // Input values
-    double InVolt = 0.0;
-    double InCurr = 0.0;
-    double InFreq = 0.0;
+    double InVolt = 0.0; // V
+    double InCurr = 0.0; // A
+    double InFreq = 0.0; // hz
 
     // Stator values
     double StatVolt = 0.0;
@@ -327,9 +334,9 @@ private:
 
     // Motor characteristics (based on transformer as equivalent circuit)
     unsigned int Poles = 0;
-    double StatActResist = 0.0;
+    double StatActResist = 0.0; // ohm
     double StatReactResist = 0.0;
-    double StatInduct = 0.07; // By default: 0.07 (temporarily)
+    double StatInduct = 0.07; // H // By default: 0.07 (temporarily)
     double RotActResist = 0.0;
     double RotReactResist = 0.0;
     double RotInduct = 2; // By default: 2 (temporarily)
@@ -342,9 +349,9 @@ private:
     double Efficiency = 1.0; // We can change this value between 0 and 1
     double MagnetRotRate = 0.0;
 
-    // Output values
-    double OutMoment = 0.0;
-    double OutRotRate = 0.0;
+    // Mechanical (output) values
+    double Torque = 0.0; // N*m
+    double RotRate = 0.0; // rpm
 };
 
 template <class T, class U>
@@ -411,26 +418,27 @@ void SimpAsyncEngine<T,U>::switchReactiveConst(const bool enable)
 }
 
 template <class T, class U>
-double SimpAsyncEngine<T,U>::getOutputMoment()
+double SimpAsyncEngine<T,U>::getOutputTorque()
 {
-    return this->OutMoment;
+    return this->Torque;
 }
 
 template <class T, class U>
 double SimpAsyncEngine<T,U>::getOutputRotationRate()
 {
-    return this->OutRotRate;
+    return this->RotRate;
 }
 
 
 // NOTE: This model is very very simplified. Many values are unused.
 // For now I need it just to make sure, that the program will run fine
 template <class T, class U>
-int SimpAsyncEngine<T,U>::runSimulation()
+int SimpAsyncEngine<T,U>::runSimulation(const double dt)
 {
     //this->StatVolt = this->InVolt;
     //this->StatCurr = this->InCurr;
     this->StatFreq = this->InFreq;
+    this->RotRate = this->OutDevice->getRotRate();
     if (!IsReactConst)
     {
         this->StatReactResist = 2 * PI * this->StatFreq * this->StatInduct;
@@ -440,9 +448,9 @@ int SimpAsyncEngine<T,U>::runSimulation()
     try
     {
         this->MagnetRotRate = (120 * this->InFreq) / this->Poles;
-        this->Slip = (this->MagnetRotRate - this->OutRotRate) / this->MagnetRotRate;
+        this->Slip = (this->MagnetRotRate - this->RotRate / 60) / this->MagnetRotRate;
         this->StatorCurr = ( this->InVolt / ( sqrt(sqr(this->StatActResist + this->RotActResist) + sqr(this->StatReactResist + this->RotReactResist)) ) ) + this->InVolt / this->AirActResist;
-        this->OutMoment = ( (3 * sqr(this->InVolt) * (this->RotActResist / this->Slip)) / (2 * PI * this->InFreq * (sqr(this->StatActResist + this->RotActResist/this->Slip) + sqr(this->StatReactResist + this->RotReactResist))) ) * this->Efficiency;
+        this->Torque = ( (3 * sqr(this->InVolt) * (this->RotActResist / this->Slip)) / (2 * PI * this->InFreq * (sqr(this->StatActResist + this->RotActResist/this->Slip) + sqr(this->StatReactResist + this->RotReactResist))) ) * this->Efficiency;
     }
     catch (_exception e)
     {
@@ -457,4 +465,73 @@ SimpAsyncEngine<T,U>::~SimpAsyncEngine()
 {
     this->InDevice = NULL;
     this->OutDevice = NULL;
+}
+
+
+// Mechanical entity
+// In this case it will be a train wheel on rails
+template <class T>
+class TrainWheel
+{
+public:
+    TrainWheel(const T * in);
+
+    T * InDevice;
+
+    void setTorque(const double m);
+    void setRotRate(const double n);
+
+    double getRotRate();
+
+    int runSimulation(const double dt);
+
+    virtual ~TrainWheel();
+
+private:
+    // Wheel kinetic values
+    double RotRate = 0.0; // rpm
+    double Torque = 0.0; // N*m
+
+    // Wheel characteristics
+    double Mass = 1800; // kg
+    double Radius = 0.86; // m
+};
+
+template <class T>
+TrainWheel<T>::TrainWheel(const T * in)
+{
+    this->InDevice = in;
+}
+
+template <class T>
+void TrainWheel<T>::setTorque(const double m)
+{
+    this->Torque = m;
+}
+
+template <class T>
+void TrainWheel<T>::setRotRate(const double n)
+{
+    this->RotRate = n;
+}
+
+template <class T>
+double TrainWheel<T>::getRotRate()
+{
+    return this->RotRate;
+}
+
+template <class T>
+int TrainWheel<T>::runSimulation(const double dt)
+{
+    try
+    {
+        this->RotRate = (this->Torque * dt) / (PI * this->Mass * this->Radius);
+    }
+    catch (_exception e)
+    {
+        return 1;
+    }
+
+    return 0;
 }
