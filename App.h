@@ -11,6 +11,15 @@ public:
 // IDs
 enum
 {
+    ID_BUTTON_RUN = 130,
+
+    ID_TEXT_SRCVOLTAGE = 200,
+    ID_TEXT_PROGCURR = 201,
+
+    ID_LABEL_SRCVOLTAGE = 300,
+    ID_LABEL_PROGCURR = 301,
+
+    ID_PLOT_OUTGRAPH = 900,
 };
 
 // MainPanel
@@ -19,7 +28,7 @@ class MainPanel : public wxPanel
 public:
     MainPanel(wxFrame *frame);
 
-    void onStartButton(wxCommandEvent &evt);
+    void onRunButton(wxCommandEvent &evt);
 
     virtual ~MainPanel();
 };

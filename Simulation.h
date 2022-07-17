@@ -13,6 +13,18 @@ const T & max(const T & a, const T & b)
     return (a > b) ? a : b;
 }
 
+template <class T>
+const T & comp(const T & mn, const T & mx, const T & a)
+{
+    return min(mx, max(mn, a));
+}
+
+template <class T>
+const T & sqr(const T & n)
+{
+    return n * n;
+}
+
 // Parent class for all electronics
 class ElectricalBase
 {
@@ -27,6 +39,8 @@ public:
     virtual double getOutputVoltage();
     virtual double getOutputCurrent();
 
+    virtual int runSimulation();
+
 private:
     double InVolt = 0.0;
     double InCurr = 0.0;
@@ -35,9 +49,7 @@ private:
     double OutCurr = 0.0;
 };
 
-ElectricalBase::ElectricalBase()
-{
-}
+ElectricalBase::ElectricalBase() {}
 
 void ElectricalBase::setInputVoltage(const double u, const bool isCurrentPersist = true)
 {
@@ -60,19 +72,30 @@ double ElectricalBase::getOutputCurrent()
     return this->OutCurr;
 }
 
+int ElectricalBase::runSimulation()
+{
+    return 0;
+}
+
 ElectricalBase::~ElectricalBase() {}
 
 // DC source
+template <class T, class U>
 class DCSource : public ElectricalBase
 {
 public:
-    DCSource(const double u, const bool isCurrentPersist, const double i);
+    DCSource(const T * in, const U * out, const double u, const bool isCurrentPersist = false, const double i = 0.0);
+
+    T * InDevice;
+    U * OutDevice;
 
     void setOutputVoltage(const double u);
     void setOutputCurrent(const double i);
 
     double getOutputVoltage();
     double getOutputCurrent();
+
+    int runSimulation();
 
     virtual ~DCSource();
 
@@ -81,33 +104,53 @@ private:
     double OutCurr = 0.0;
 };
 
-DCSource::DCSource(const double u = 0.0, const bool isCurrentPersist = false, const double i = 0.0)
+template <class T, class U>
+DCSource<T,U>::DCSource(const T * in, const U * out, const double u, const bool isCurrentPersist, const double i)
 {
+    this->InDevice = in;
+    this->OutDevice = out;
     this->OutVolt = u;
     this->OutCurr = (isCurrentPersist) ? i : INT_MAX;
 }
 
-void DCSource::setOutputVoltage(const double u)
+template <class T, class U>
+void DCSource<T,U>::setOutputVoltage(const double u)
 {
     this->OutVolt = u;
 }
 
-void DCSource::setOutputCurrent(const double i)
+template <class T, class U>
+void DCSource<T,U>::setOutputCurrent(const double i)
 {
     this->OutCurr = i;
 }
 
-double DCSource::getOutputVoltage()
+template <class T, class U>
+double DCSource<T,U>::getOutputVoltage()
 {
     return this->OutVolt;
 }
 
-double DCSource::getOutputCurrent()
+template <class T, class U>
+double DCSource<T,U>::getOutputCurrent()
 {
     return this->OutCurr;
 }
 
-DCSource::~DCSource() {}
+template <class T, class U>
+int DCSource<T,U>::runSimulation()
+{
+    this->OutDevice->setInputVoltage(this->OutVolt, (this->OutCurr == INT_MAX) ? false : true);
+
+    return 0;
+}
+
+template <class T, class U>
+DCSource<T,U>::~DCSource()
+{
+    this->InDevice = NULL;
+    this->OutDevice = NULL;
+}
 
 // Simple converter (Inverter) DC->AC [src->INV->eng]
 template <class T, class U>
@@ -117,8 +160,8 @@ public:
     SimpInverter(const T * in, const U * out);
     //SimpInverter();
 
-    T * inDevice;
-    U * outDevice;
+    T * InDevice;
+    U * OutDevice;
 
     void setInputVoltage(const double u, const bool isCurrentPersist = true);
     void setInputCurrent(const double i);
@@ -160,13 +203,9 @@ private:
 template <class T, class U>
 SimpInverter<T,U>::SimpInverter(const T * in, const U * out)
 {
-    this->inDevice = in;
-    this->outDevice = out;
+    this->InDevice = in;
+    this->OutDevice = out;
 }
-
-/*SimpInverter::SimpInverter()
-{
-}*/
 
 template <class T, class U>
 void SimpInverter<T,U>::setInputVoltage(const double u, const bool isCurrentPersist)
@@ -224,24 +263,40 @@ int SimpInverter<T,U>::runSimulation()
     this->OutCurr = min(this->ProgCurr, this->InCurr/sqrt(2));
     this->OutFreq = this->ProgFreq;
 
+    this->OutDevice->setInputVoltage(this->OutVolt);
+    this->OutDevice->setInputCurrent(this->OutCurr);
+    this->OutDevice->setInputFrequency(this->OutFreq);
+
+
     return 0;
 }
 
 template <class T, class U>
-SimpInverter<T,U>::~SimpInverter() {}
+SimpInverter<T,U>::~SimpInverter()
+{
+    this->InDevice = NULL;
+    this->OutDevice = NULL;
+}
 
 // Simplified model of AC induction motor [inv->ENG->mech]
+template <class T, class U>
 class SimpAsyncEngine : public ElectricalBase
 {
 public:
-    SimpAsyncEngine(const unsigned int poles, const double statActResist, const double rotActResist, const bool enableReactConst, const double statReactResist, const double rotReactResist, const double magnetReactResist);
+    SimpAsyncEngine(const T * in, const U * out, const unsigned int poles, const double statActResist, const double rotActResist,
+                    const double airActResist, const bool enableReactConst = true, const double statReactResist = 0.0, const double rotReactResist = 0.0,
+                    const double magnetReactResist = 0.0);
 
-    void setInputVoltage(const double u, const bool isCurrentPersist);
+    T * InDevice;
+    U * OutDevice;
+
+    void setInputVoltage(const double u, const bool isCurrentPersist = true);
     void setInputCurrent(const double i);
     void setInputFrequency(const double f);
     void setStatorReactiveResistance(const double x);
     void setRotorReactiveResistance(const double x);    // Note: only works, when IsReactConst is true
     void setMagneticReactiveResistance(const double x);
+    void setEfficiency(const double n);
 
     // true: reactive resistance is dynamic and is calculated by formula
     // false: reactive resistance is static and being constant
@@ -279,18 +334,27 @@ private:
     double RotReactResist = 0.0;
     double RotInduct = 2; // By default: 2 (temporarily)
     double MagnetReactResist = 0.0;
+    double AirActResist = 0.0;
     bool IsReactConst = true;
 
     // Misc values
-    double Slope = 0.0;
+    double Slip = 0.0;
+    double Efficiency = 1.0; // We can change this value between 0 and 1
+    double MagnetRotRate = 0.0;
 
     // Output values
     double OutMoment = 0.0;
     double OutRotRate = 0.0;
 };
 
-SimpAsyncEngine::SimpAsyncEngine(const unsigned int poles, const double statActResist, const double rotActResist, const bool enableReactConst = true, const double statReactResist = 0.0, const double rotReactResist = 0.0, const double magnetReactResist = 0.0)
+template <class T, class U>
+SimpAsyncEngine<T,U>::SimpAsyncEngine(const T * in, const U * out, const unsigned int poles, const double statActResist, const double rotActResist,
+                                 const double airActResist, const bool enableReactConst, const double statReactResist, const double rotReactResist,
+                                 const double magnetReactResist)
 {
+    this->InDevice = in;
+    this->OutDevice = out;
+
     this->Poles = poles;
     this->StatActResist = statActResist;
     this->RotActResist = rotActResist;
@@ -303,51 +367,69 @@ SimpAsyncEngine::SimpAsyncEngine(const unsigned int poles, const double statActR
     }
 }
 
-void SimpAsyncEngine::setInputVoltage(const double u, const bool isCurrentPersist = true)
+template <class T, class U>
+void SimpAsyncEngine<T,U>::setInputVoltage(const double u, const bool isCurrentPersist)
 {
     this->InVolt = u;
     if (!isCurrentPersist) this->InCurr = INT_MAX;
 }
 
-void SimpAsyncEngine::setInputCurrent(const double i)
+template <class T, class U>
+void SimpAsyncEngine<T,U>::setInputCurrent(const double i)
 {
     this->InCurr = i;
 }
 
-void SimpAsyncEngine::setInputFrequency(const double f)
+template <class T, class U>
+void SimpAsyncEngine<T,U>::setInputFrequency(const double f)
 {
     this->InFreq = f;
 }
 
-void SimpAsyncEngine::setStatorReactiveResistance(const double x)
+template <class T, class U>
+void SimpAsyncEngine<T,U>::setStatorReactiveResistance(const double x)
 {
     this->StatReactResist = x;
 }
 
-void SimpAsyncEngine::setRotorReactiveResistance(const double x)
+template <class T, class U>
+void SimpAsyncEngine<T,U>::setRotorReactiveResistance(const double x)
 {
     this->RotReactResist = x;
 }
 
-void SimpAsyncEngine::switchReactiveConst(const bool enable)
+template <class T, class U>
+void SimpAsyncEngine<T,U>::setEfficiency(const double n)
+{
+    this->Efficiency = comp(0.0, 1.0, n);
+}
+
+template <class T, class U>
+void SimpAsyncEngine<T,U>::switchReactiveConst(const bool enable)
 {
     this->IsReactConst = enable;
 }
 
-double SimpAsyncEngine::getOutputMoment()
+template <class T, class U>
+double SimpAsyncEngine<T,U>::getOutputMoment()
 {
     return this->OutMoment;
 }
 
-double SimpAsyncEngine::getOutputRotationRate()
+template <class T, class U>
+double SimpAsyncEngine<T,U>::getOutputRotationRate()
 {
     return this->OutRotRate;
 }
 
-int SimpAsyncEngine::runSimulation()
+
+// NOTE: This model is very very simplified. Many values are unused.
+// For now I need it just to make sure, that the program will run fine
+template <class T, class U>
+int SimpAsyncEngine<T,U>::runSimulation()
 {
-    this->StatVolt = this->InVolt;
-    this->StatCurr = this->InCurr;
+    //this->StatVolt = this->InVolt;
+    //this->StatCurr = this->InCurr;
     this->StatFreq = this->InFreq;
     if (!IsReactConst)
     {
@@ -355,9 +437,24 @@ int SimpAsyncEngine::runSimulation()
         this->RotReactResist = 2 * PI * this->RotFreq * this->RotInduct;
     }
 
-
+    try
+    {
+        this->MagnetRotRate = (120 * this->InFreq) / this->Poles;
+        this->Slip = (this->MagnetRotRate - this->OutRotRate) / this->MagnetRotRate;
+        this->StatorCurr = ( this->InVolt / ( sqrt(sqr(this->StatActResist + this->RotActResist) + sqr(this->StatReactResist + this->RotReactResist)) ) ) + this->InVolt / this->AirActResist;
+        this->OutMoment = ( (3 * sqr(this->InVolt) * (this->RotActResist / this->Slip)) / (2 * PI * this->InFreq * (sqr(this->StatActResist + this->RotActResist/this->Slip) + sqr(this->StatReactResist + this->RotReactResist))) ) * this->Efficiency;
+    }
+    catch (_exception e)
+    {
+        return 1;
+    }
 
     return 0;
 }
 
-SimpAsyncEngine::~SimpAsyncEngine() {}
+template <class T, class U>
+SimpAsyncEngine<T,U>::~SimpAsyncEngine()
+{
+    this->InDevice = NULL;
+    this->OutDevice = NULL;
+}

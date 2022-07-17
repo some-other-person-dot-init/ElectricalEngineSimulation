@@ -2,6 +2,9 @@
 #ifndef WX_PRECOMP
 #include <wx/wx.h>
 #endif // WX_PRECOMP
+
+#include <mathplot.h>
+
 #include "App.h"
 #include "Simulation.h"
 
@@ -10,7 +13,7 @@ IMPLEMENT_APP(MainApp)
 // MainApp
 bool MainApp::OnInit()
 {
-    MainFrame *frame = new MainFrame("Induction Motor Simulation", wxDefaultPosition, wxSize(500,500));
+    MainFrame *frame = new MainFrame("Electrical Motor Simulation", wxDefaultPosition, wxSize(500,500));
     frame->Show();
     SetTopWindow(frame);
 

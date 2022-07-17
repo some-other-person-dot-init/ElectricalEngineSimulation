@@ -7,7 +7,7 @@
 *.o
 *.txt
 
-*Paths
+#Paths
 [Bb]in/
 [Oo]bj/
 
