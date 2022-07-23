@@ -535,3 +535,9 @@ int TrainWheel<T>::runSimulation(const double dt)
 
     return 0;
 }
+
+template <class T>
+TrainWheel<T>::~TrainWheel()
+{
+    this->InDevice = NULL;
+}
