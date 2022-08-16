@@ -17,6 +17,31 @@
 
 IMPLEMENT_APP(MainApp)
 
+// Misc Functions
+
+// It would better if there was a kind of evt.Cancel(), unfortuanetly wxWidgets doesn't provide it :(
+bool CancelEvtText(wxCommandEvent evt)
+{
+    try
+    {
+        long lastInsPos = ((wxTextCtrl *)evt.GetEventObject())->GetInsertionPoint();
+        ((wxTextCtrl *)evt.GetEventObject())->ChangeValue(evt.GetString().Remove(((wxTextCtrl *)evt.GetEventObject())->GetInsertionPoint() - 1, 1));
+        ((wxTextCtrl *)evt.GetEventObject())->SetInsertionPoint(lastInsPos - 1);
+        return true;
+    }
+    catch (_exception e)
+    {
+        wxMessageBox(_("Error while canceling EVT_TEXT!"), _("ERROR!"), wxOK | wxICON_ERROR);
+        return false;
+    }
+}
+
+double TextToDouble(wxTextCtrl *txt)
+{
+    wxChar *end;
+    return wxStrtod(txt->GetValue(), &end);
+}
+
 // MainApp
 bool MainApp::OnInit()
 {
@@ -33,6 +58,8 @@ BEGIN_EVENT_TABLE(MainPanel, wxPanel)
     EVT_CHECKBOX(ID_CHECK_ISCURRPERSIST, MainPanel::onSrccurrCheck)
     EVT_CHECKBOX(ID_CHECK_SWITCHREACT, MainPanel::onSwitchReactCheck)
     EVT_TEXT(ID_TEXT_AIRACTRESIST, MainPanel::onInputTextEntry)
+    EVT_TEXT(ID_TEXT_DELTATIME, MainPanel::onInputTextEntry)
+    EVT_TEXT(ID_TEXT_EFFICIENCY, MainPanel::onInputTextEntry)
     EVT_TEXT(ID_TEXT_MAGNETICREACTRESIST, MainPanel::onInputTextEntry)
     EVT_TEXT(ID_TEXT_POLES, MainPanel::onInputTextEntry)
     EVT_TEXT(ID_TEXT_PROGCURR, MainPanel::onInputTextEntry)
@@ -74,6 +101,7 @@ MainPanel::MainPanel(wxFrame *frame) : wxPanel(frame, wxID_ANY)
     m_lbl_effic = new wxStaticText(this, ID_LABEL_EFFICIENCY, "Efficiency [0; 1]:", wxPoint(10, 375));
     m_lbl_secout = new wxStaticText(this, ID_LABEL_SECTIONOUTPUT, "OUTPUT", wxPoint(320, 10));
     m_lbl_secout->SetFont(m_lbl_secout->GetFont().MakeBold());
+    m_lbl_dt = new wxStaticText(this, ID_LABEL_DELTATIME, "Iteration interval:", wxPoint(320, 30));
 
     m_txt_srcvolt = new wxTextCtrl(this, ID_TEXT_SRCVOLT, "0", wxPoint(120, 30), APP_DEFAULT_TEXTSIZE);
     m_txt_srccurr = new wxTextCtrl(this, ID_TEXT_SRCCURR, "0", wxPoint(120, 70), APP_DEFAULT_TEXTSIZE);
@@ -89,11 +117,12 @@ MainPanel::MainPanel(wxFrame *frame) : wxPanel(frame, wxID_ANY)
     m_txt_rotreactres = new wxTextCtrl(this, ID_TEXT_ROTREACTRESIST, "0", wxPoint(250, 330), APP_DEFAULT_TEXTSIZE);
     m_txt_magnreactres = new wxTextCtrl(this, ID_TEXT_MAGNETICREACTRESIST, "0", wxPoint(250, 350), APP_DEFAULT_TEXTSIZE);
     m_txt_effic = new wxTextCtrl(this, ID_TEXT_EFFICIENCY, "0", wxPoint(100, 375), APP_DEFAULT_TEXTSIZE);
+    m_txt_dt = new wxTextCtrl(this, ID_TEXT_DELTATIME, "0", wxPoint(420, 30), APP_DEFAULT_TEXTSIZE);
 
     m_chk_iscurrpers = new wxCheckBox(this, ID_CHECK_ISCURRPERSIST, "Has the source non-infinite current?", wxPoint(10, 50));
     m_chk_switchreact = new wxCheckBox(this, ID_CHECK_SWITCHREACT, "Make reactive resistance dynamic?", wxPoint(10, 290));
 
-    m_txt_output = new wxTextCtrl(this, ID_PLOT_OUTGRAPH, wxEmptyString, wxPoint(320, 30), wxSize(180, 320), wxTE_READONLY | wxTE_MULTILINE);
+    m_txt_output = new wxTextCtrl(this, ID_PLOT_OUTGRAPH, wxEmptyString, wxPoint(320, 55), wxSize(180, 295), wxTE_READONLY | wxTE_MULTILINE);
 
 
     this->SetDefValues();
@@ -101,7 +130,36 @@ MainPanel::MainPanel(wxFrame *frame) : wxPanel(frame, wxID_ANY)
 
 void MainPanel::onRunButton(wxCommandEvent &evt)
 {
+    //// Init
+    //DCSource<SimpInverter<TrainWheel>> *Src = new DCSource<SimpInverter<TrainWheel>>(NULL, wxStrtod(this->m_txt_srcvolt->GetValue(),this->m_txt_srcvolt->GetValue()[this->m_txt_srcvolt->GetValue().Len()]), this->m_chk_iscurrpers->IsChecked(), wxStrtod(this->m_txt_srccurr->GetValue(), this->m_txt_srccurr->GetValue()[this->m_txt_srccurr->GetValue().Len()]));
+    DCSource *Src = new DCSource(TextToDouble(this->m_txt_srcvolt), this->m_chk_iscurrpers->IsChecked(), TextToDouble(this->m_txt_srccurr));
+    SimpInverter *Inv = new SimpInverter();
+    SimpAsyncEngine *Eng = new SimpAsyncEngine(TextToDouble(this->m_txt_poles), TextToDouble(this->m_txt_statactres), TextToDouble(this->m_txt_rotactres), TextToDouble(this->m_txt_airactres), !this->m_chk_switchreact->IsChecked(), TextToDouble(this->m_txt_statreactres), TextToDouble(this->m_txt_rotreactres), TextToDouble(this->m_txt_magnreactres));
+    TrainWheel *Mec = new TrainWheel();
+    double dt = TextToDouble(this->m_txt_dt);
+    int codes[4] = {0, 0, 0, 0};
+    this->m_txt_effic->ChangeValue(wxString::Format(wxT("%f"), comp(0.0, 1.0, TextToDouble(this->m_txt_effic))));
 
+    // DCSource
+    codes[0] = Src->runSimulation(dt);
+
+    // Inverter
+    Inv->setInputVoltage(Src->getOutputVoltage(), (Src->getOutputCurrent() == INT_MAX) ? false : true);
+    Inv->setInputCurrent(this->m_chk_iscurrpers->IsChecked() ? Src->getOutputCurrent() : INT_MAX);
+    codes[1] = Inv->runSimulation(dt);
+
+    // Engine
+    Eng->setInputVoltage(Inv->getOutputVoltage(), true);
+    Eng->setInputCurrent(Inv->getOutputCurrent());
+    Eng->setInputFrequency(Inv->getOutputFrequency());
+    Eng->setEfficiency(TextToDouble(this->m_txt_effic));
+    Eng->setRotationRate(0);
+    codes[2] = Eng->runSimulation(dt);
+
+    // Mechanism
+    Mec->setTorque(Eng->getOutputTorque());
+    codes[3] = Mec->runSimulation(dt);
+    Eng->setRotationRate(Mec->getRotationRate());
 }
 
 void MainPanel::onSrccurrCheck(wxCommandEvent &evt)
@@ -150,13 +208,7 @@ void MainPanel::onSwitchReactCheck(wxCommandEvent &evt)
 
 void MainPanel::onInputTextEntry(wxCommandEvent &evt)
 {
-    // It would better if there was kind of evt.Cancel(), unfortuanetly wxWidgets doesn't provide it :(
-    if (!evt.GetString().IsNumber())
-    {
-        long lastInsPos = ((wxTextCtrl *)evt.GetEventObject())->GetInsertionPoint();
-        ((wxTextCtrl *)evt.GetEventObject())->ChangeValue(evt.GetString().Remove(((wxTextCtrl *)evt.GetEventObject())->GetInsertionPoint() - 1, 1));
-        ((wxTextCtrl *)evt.GetEventObject())->SetInsertionPoint(lastInsPos - 1);
-    }
+    if (!evt.GetString().IsNumber()) CancelEvtText(evt);
 }
 
 void MainPanel::SetDefValues()
@@ -172,6 +224,7 @@ void MainPanel::SetDefValues()
     this->m_txt_statreactres->ChangeValue("1.2");
     this->m_txt_rotreactres->ChangeValue("1.2");
     this->m_txt_effic->ChangeValue("0.91");
+    this->m_txt_dt->ChangeValue("0.2");
 }
 
 MainPanel::~MainPanel() {}
@@ -186,6 +239,11 @@ MainFrame::MainFrame(const wxString &title, const wxPoint &pos, const wxSize &si
     m_panel = new MainPanel(this);
 
     CreateStatusBar(2);
+}
+
+void MainFrame::onExit(wxCommandEvent &evt)
+{
+    Close();
 }
 
 MainFrame::~MainFrame() {}

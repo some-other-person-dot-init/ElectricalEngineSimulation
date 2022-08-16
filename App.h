@@ -26,6 +26,7 @@ enum
     ID_TEXT_POLES = 210,
     ID_TEXT_SRCCURR = 211,
     ID_TEXT_EFFICIENCY = 212,
+    ID_TEXT_DELTATIME = 213,
 
     ID_LABEL_SRCVOLT = 300,
     ID_LABEL_PROGVOLT = 301,
@@ -44,6 +45,7 @@ enum
     ID_LABEL_SECTIONINVERTER = 314,
     ID_LABEL_SECTIONENGINE = 315,
     ID_LABEL_SECTIONOUTPUT = 316,
+    ID_LABEL_DELTATIME = 317,
 
     ID_CHECK_SWITCHREACT = 500,
     ID_CHECK_ISCURRPERSIST = 501,
@@ -82,6 +84,7 @@ private:
     wxTextCtrl *m_txt_poles;
     wxTextCtrl *m_txt_srccurr;
     wxTextCtrl *m_txt_effic;
+    wxTextCtrl *m_txt_dt;
 
     wxStaticText *m_lbl_srcvolt;
     wxStaticText *m_lbl_progvolt;
@@ -100,6 +103,7 @@ private:
     wxStaticText *m_lbl_secinv;
     wxStaticText *m_lbl_seceng;
     wxStaticText *m_lbl_secout;
+    wxStaticText *m_lbl_dt;
 
     wxCheckBox *m_chk_switchreact;
     wxCheckBox *m_chk_iscurrpers;
@@ -116,9 +120,9 @@ class MainFrame : public wxFrame
 public:
     MainFrame(const wxString &title, const wxPoint &pos, const wxSize &size);
 
-    virtual ~MainFrame();
-
     void onExit(wxCommandEvent &evt);
+
+    virtual ~MainFrame();
 
 private:
     MainPanel *m_panel;
