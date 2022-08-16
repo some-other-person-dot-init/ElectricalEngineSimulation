@@ -6,8 +6,13 @@
 *.exe
 *.o
 *.txt
+*.sln
+*.vcxproj*
+
 
 #Paths
 [Bb]in/
 [Oo]bj/
+.vs/
+x64/
 

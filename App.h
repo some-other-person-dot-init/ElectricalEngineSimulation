@@ -1,4 +1,4 @@
-#ifndef __BASE_H
+﻿#ifndef __BASE_H
 #define __BASE_H
 
 // Main App
@@ -25,6 +25,7 @@ enum
     ID_TEXT_MAGNETICREACTRESIST = 209,
     ID_TEXT_POLES = 210,
     ID_TEXT_SRCCURR = 211,
+    ID_TEXT_EFFICIENCY = 212,
 
     ID_LABEL_SRCVOLT = 300,
     ID_LABEL_PROGVOLT = 301,
@@ -38,6 +39,11 @@ enum
     ID_LABEL_MAGNETICREACTRESIST = 309,
     ID_LABEL_POLES = 310,
     ID_LABEL_SRCCURR = 311,
+    ID_LABEL_EFFICIENCY = 312,
+    ID_LABEL_SECTIONSOURCE = 313,
+    ID_LABEL_SECTIONINVERTER = 314,
+    ID_LABEL_SECTIONENGINE = 315,
+    ID_LABEL_SECTIONOUTPUT = 316,
 
     ID_CHECK_SWITCHREACT = 500,
     ID_CHECK_ISCURRPERSIST = 501,
@@ -52,24 +58,30 @@ public:
     MainPanel(wxFrame *frame);
 
     void onRunButton(wxCommandEvent &evt);
+    void onSrccurrCheck(wxCommandEvent &evt);
+    void onSwitchReactCheck(wxCommandEvent &evt);
+    void onInputTextEntry(wxCommandEvent &evt);
+
+    void SetDefValues(); // Temp method for testing purposes
 
     virtual ~MainPanel();
 
 private:
     wxButton *m_btn_run;
 
-    wxTextEntry *m_txt_srcvolt;
-    wxTextEntry *m_txt_progvolt;
-    wxTextEntry *m_txt_progcurr;
-    wxTextEntry *m_txt_progfreq;
-    wxTextEntry *m_txt_statactres;
-    wxTextEntry *m_txt_rotactres;
-    wxTextEntry *m_txt_airactres;
-    wxTextEntry *m_txt_statreactres;
-    wxTextEntry *m_txt_rotreactres;
-    wxTextEntry *m_txt_magnreactres;
-    wxTextEntry *m_txt_poles;
-    wxTextEntry *m_txt_srccurr;
+    wxTextCtrl *m_txt_srcvolt;
+    wxTextCtrl *m_txt_progvolt;
+    wxTextCtrl *m_txt_progcurr;
+    wxTextCtrl *m_txt_progfreq;
+    wxTextCtrl *m_txt_statactres;
+    wxTextCtrl *m_txt_rotactres;
+    wxTextCtrl *m_txt_airactres;
+    wxTextCtrl *m_txt_statreactres;
+    wxTextCtrl *m_txt_rotreactres;
+    wxTextCtrl *m_txt_magnreactres;
+    wxTextCtrl *m_txt_poles;
+    wxTextCtrl *m_txt_srccurr;
+    wxTextCtrl *m_txt_effic;
 
     wxStaticText *m_lbl_srcvolt;
     wxStaticText *m_lbl_progvolt;
@@ -83,11 +95,17 @@ private:
     wxStaticText *m_lbl_magnreactres;
     wxStaticText *m_lbl_poles;
     wxStaticText *m_lbl_srccurr;
+    wxStaticText *m_lbl_effic;
+    wxStaticText *m_lbl_secsrc;
+    wxStaticText *m_lbl_secinv;
+    wxStaticText *m_lbl_seceng;
+    wxStaticText *m_lbl_secout;
 
     wxCheckBox *m_chk_switchreact;
     wxCheckBox *m_chk_iscurrpers;
 
-    mpWindow *m_mpw_outgraph;
+    //wxImage m_img_outgraph; // TODO make proper output graph with values and get ríd of placeholder
+    wxTextCtrl* m_txt_output; // PLACEHOLDER
 
     DECLARE_EVENT_TABLE();
 };
